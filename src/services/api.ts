@@ -1,17 +1,31 @@
+import Constants from 'expo-constants';
 import { File as ArchivoNativo, UploadType } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import { DenunciaEstadoApi, DenunciaPrioridad } from '@/constants/denuncias';
 
 /**
- * IP local de la PC donde corre el backend (baches-web). El celular y la PC
- * tienen que estar en la misma red WiFi. Si cambia la IP de la PC (podés
- * verla con `ipconfig`), actualizá este valor.
+ * URL del backend (baches-web). Se resuelve en este orden:
+ *   1. EXPO_PUBLIC_API_URL en `.env.local` (no se sube a git), para forzar otra URL.
+ *   2. La IP de la PC que está corriendo `npx expo start`, detectada sola,
+ *      así funciona en cualquier PC o red sin tocar el código.
  *
- * En la PC, levantá el backend con:
+ * El celular y la PC tienen que estar en la misma red WiFi, y el backend
+ * se levanta con:
  *   php artisan serve --host=0.0.0.0 --port=8000
  */
-const API_BASE_URL = 'http://192.168.0.10:8000/api';
+function obtenerApiBaseUrl(): string {
+  const urlDelEnv = process.env.EXPO_PUBLIC_API_URL;
+  if (urlDelEnv) {
+    return urlDelEnv.replace(/\/+$/, '');
+  }
+
+  // hostUri tiene la forma "192.168.0.17:8081": nos quedamos con la IP.
+  const hostDelServidorExpo = Constants.expoConfig?.hostUri?.split(':')[0];
+  return `http://${hostDelServidorExpo || 'localhost'}:8000/api`;
+}
+
+const API_BASE_URL = obtenerApiBaseUrl();
 
 async function extraerMensajeDeError(response: Response, mensajePorDefecto: string): Promise<string> {
   const json = await response.json().catch(() => null);
